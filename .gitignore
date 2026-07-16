@@ -1,0 +1,17 @@
+﻿# Data
+data/raw/*
+!data/raw/.gitkeep
+
+# Airflow
+logs/
+plugins/
+airflow.cfg
+airflow.db
+*.pyc
+__pycache__/
+
+# Env
+.env
+
+# OS
+.DS_Store
