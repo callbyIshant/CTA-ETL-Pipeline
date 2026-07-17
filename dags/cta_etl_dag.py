@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pandas as pd
 from airflow.providers.postgres.hooks.postgres import PostgresHook
@@ -12,11 +12,32 @@ TRANSFORM_SQL_PATH = "/opt/airflow/sql/transform/create_analytics_table.sql"
 logger = logging.getLogger(__name__)
 
 
+def notify_failure(context):
+    ti = context["task_instance"]
+    logger.error(
+        "ALERT: task '%s' in dag '%s' failed (run_id=%s). "
+        "In a real deployment this would page/Slack/email the on-call.",
+        ti.task_id,
+        ti.dag_id,
+        context["dag_run"].run_id,
+    )
+
+
+default_args = {
+    "retries": 2,
+    "retry_delay": timedelta(minutes=5),
+    "on_failure_callback": notify_failure,
+}
+
+
 @dag(
     dag_id="cta_etl_pipeline",
-    schedule=None,
+    schedule="0 6 * * *",          # daily at 06:00
     start_date=datetime(2026, 1, 1),
     catchup=False,
+    max_active_runs=1,             # prevent overlapping runs from corrupting the truncate+load
+    dagrun_timeout=timedelta(minutes=30),
+    default_args=default_args,
     tags=["cta", "etl", "portfolio"],
 )
 def cta_etl_pipeline():
